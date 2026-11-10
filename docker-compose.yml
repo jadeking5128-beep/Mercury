@@ -5,7 +5,10 @@ services:
     environment:
       MERCURY_API_TOKEN: ${MERCURY_API_TOKEN:?Set MERCURY_API_TOKEN in the environment}
       MERCURY_DB: /data/mercury.db
-      MERCURY_CORS_ORIGINS: ${MERCURY_CORS_ORIGINS:-http://localhost:3000}\n      MERCURY_AI_BASE_URL: ${MERCURY_AI_BASE_URL:-}\n      MERCURY_AI_API_KEY: ${MERCURY_AI_API_KEY:-}\n      MERCURY_AI_MODEL: ${MERCURY_AI_MODEL:-}
+      MERCURY_CORS_ORIGINS: ${MERCURY_CORS_ORIGINS:-http://localhost:3000}
+      MERCURY_AI_BASE_URL: ${MERCURY_AI_BASE_URL:-}
+      MERCURY_AI_API_KEY: ${MERCURY_AI_API_KEY:-}
+      MERCURY_AI_MODEL: ${MERCURY_AI_MODEL:-}
     ports:
       - "127.0.0.1:8765:8765"
     volumes:
