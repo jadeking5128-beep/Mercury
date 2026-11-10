@@ -10,10 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse\nfrom fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from mercury import __version__\nfrom mercury.ai.analyst import analyze_findings
+from mercury import __version__
+from mercury.ai.analyst import analyze_findings
 from mercury.security.scope import normalize_hostname, verify_dns_challenge
 from mercury.storage import audit, connect, init_db
 from mercury.tools.registry import tool_status_dicts
