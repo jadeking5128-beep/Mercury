@@ -31,7 +31,7 @@ export MERCURY_API_TOKEN="the-same-token"
 mercury worker
 ```
 
-The Termux worker makes outbound HTTPS requests; no inbound phone port is required.
+The Termux worker makes outbound HTTPS requests; no inbound phone port is required.\n\nOptional AI analysis can be enabled by setting `MERCURY_AI_BASE_URL`, `MERCURY_AI_API_KEY`, and `MERCURY_AI_MODEL` on the API host. If omitted, Mercury uses deterministic severity-based triage.
 
 ## Security notes
 
