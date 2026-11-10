@@ -93,7 +93,7 @@ All API endpoints require `Authorization: Bearer <MERCURY_API_TOKEN>`. Interacti
 - Worker jobs use the API token and should be upgraded to separate worker credentials before public multi-user hosting.
 - AI analysis is deterministic rule-based triage, not an LLM. Provider integration and human-approved AI test planning are future work.
 - Nmap is optional. Other registered tools are detected but not automatically executed.
-- The dashboard is served by FastAPI. Vercel deployment requires a separate persistent API/worker/database deployment; Vercel alone is not the scan execution host.
+- The dashboard can be deployed as a static site on Vercel from `dashboard/` using `vercel.json`. The API, persistent database, and worker run separately; see [Deployment](docs/DEPLOYMENT.md).
 
 ## Development
 
