@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse\nfrom fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from mercury import __version__
+from mercury import __version__\nfrom mercury.ai.analyst import analyze_findings
 from mercury.security.scope import normalize_hostname, verify_dns_challenge
 from mercury.storage import audit, connect, init_db
 from mercury.tools.registry import tool_status_dicts
@@ -281,9 +281,7 @@ def fail_job(job_id: str, body: JobFailure, _: str = Depends(require_token)) -> 
 
 @app.post("/api/v1/ai/analyze")
 def ai_analyze(body: JobResult, _: str = Depends(require_token)) -> dict[str, Any]:
-    """Deterministic finding triage; LLM provider integration is a later opt-in module."""
-    priority = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
-    ordered = sorted(body.findings, key=lambda item: priority.get(str(item.get("severity", "info")).lower(), 5))
-    return {"mode": "rule_based", "summary": f"Analysed {len(ordered)} supplied finding(s).",
-            "prioritized_findings": ordered,
-            "note": "This is deterministic triage, not an LLM-generated penetration-test plan."}
+    try:
+        return analyze_findings(body.findings)
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc)) from exc
