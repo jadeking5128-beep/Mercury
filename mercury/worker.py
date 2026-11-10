@@ -18,7 +18,7 @@ class MercuryWorker:
     def __init__(self, api_url: str, token: str, name: str | None = None) -> None:
         self.api_url = api_url.rstrip("/")
         self.token = token
-        self.name = name or f"termux-{uuid.uuid4().hex[:8]}"
+        self.name = name or f"termux-{uuid.uuid4().hex[:8]}"\n        self.tools = tool_status_dicts()
 
     def request(self, method: str, path: str, payload: dict | None = None) -> dict:
         data = json.dumps(payload).encode() if payload is not None else None
