@@ -236,7 +236,7 @@ def claim_job(body: WorkerClaim, _: str = Depends(require_token)) -> dict[str, A
         db.execute("BEGIN IMMEDIATE")
         row = db.execute("""SELECT j.id AS job_id,s.id AS scan_id,s.modules,t.hostname
           FROM jobs j JOIN scans s ON s.id=j.scan_id JOIN targets t ON t.id=s.target_id
-          WHERE j.status='queued' AND s.status='queued' AND t.verified=1
+          WHERE ((j.status='queued' AND s.status='queued') OR\n                 (j.status='running' AND j.claimed_at < datetime('now','-10 minutes')\n                  AND s.status='running')) AND t.verified=1
           ORDER BY s.created_at LIMIT 1""").fetchone()
         if not row:
             return {"job": None}
@@ -277,6 +277,17 @@ def fail_job(job_id: str, body: JobFailure, _: str = Depends(require_token)) -> 
                    (body.error, job["scan_id"]))
     audit("scan.failed", job["scan_id"], {"error": body.error})
     return {"failed": True}
+
+
+
+@app.get("/api/v1/audit")
+def list_audit(_: str = Depends(require_token)) -> dict[str, Any]:
+    with connect() as db:
+        rows = db.execute("SELECT id,action,subject,details,created_at FROM audit ORDER BY created_at DESC LIMIT 200").fetchall()
+    items = [dict(row) for row in rows]
+    for item in items:
+        item["details"] = json.loads(item["details"])
+    return {"events": items}
 
 
 @app.post("/api/v1/ai/analyze")
