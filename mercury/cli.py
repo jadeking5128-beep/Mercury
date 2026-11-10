@@ -39,7 +39,7 @@ def main() -> int:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("doctor", help="inspect the local environment")
-    sub.add_parser("tools", help="list supported security tools")
+    sub.add_parser("tools", help="list supported security tools")\n    sub.add_parser("install-tools", help="install the curated native Termux tool set")
     sub.add_parser("token", help="generate a secure API token")
     sub.add_parser("api", help="run the Mercury API")
     sub.add_parser("worker", help="run an outbound-polling scan worker")
