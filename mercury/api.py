@@ -20,7 +20,7 @@ from mercury.tools.registry import tool_status_dicts
 
 app = FastAPI(title="Mercury API", version=__version__,
               description="Termux-first security assessment platform")
-DASHBOARD = Path(__file__).resolve().parent.parent / "dashboard" / "index.html"
+DASHBOARD = Path(__file__).resolve().parent / "dashboard" / "index.html"
 
 
 @app.on_event("startup")
