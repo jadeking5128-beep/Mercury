@@ -29,6 +29,7 @@ cd Mercury
 python -m venv .venv
 . .venv/bin/activate
 pip install -e ".[api,dev]"
+mercury install-tools
 mercury doctor
 mercury tools
 ```
