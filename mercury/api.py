@@ -22,6 +22,16 @@ from mercury.tools.registry import tool_status_dicts
 
 app = FastAPI(title="Mercury API", version=__version__,
               description="Termux-first security assessment platform")
+_origins = [item.strip() for item in os.environ.get(
+    "MERCURY_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:8765"
+).split(",") if item.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 DASHBOARD = Path(__file__).resolve().parent / "dashboard" / "index.html"
 
 
