@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "buildCommand": "echo 'Deploying Mercury static dashboard'",
+  "outputDirectory": "dashboard",
+  "framework": null
+}
