@@ -6,18 +6,29 @@ import json
 import os
 import secrets
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 DB_PATH = Path(os.environ.get("MERCURY_DB", str(Path.home() / ".mercury" / "mercury.db")))
 
 
-def connect() -> sqlite3.Connection:
+@contextmanager
+def connect() -> Iterator[sqlite3.Connection]:
+    """Open a connection, commit on success, roll back on error, and always close."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH, timeout=15)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
-    return db
+    db.execute("PRAGMA foreign_keys=ON")
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def init_db() -> None:
