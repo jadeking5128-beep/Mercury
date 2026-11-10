@@ -1,20 +1,25 @@
 # Mercury
 
-**Termux-first, AI-assisted security assessment platform.**
+**Termux-first, remotely accessible security assessment platform.**
 
-Mercury is an open-source toolkit for assessing websites, servers, and APIs that you own or are explicitly authorized to test. It combines a portable command-line worker, an extensible tool registry, a remote API, and an AI-assisted analysis layer.
+Mercury is an open-source security assessment workspace for DNS-verified websites and services you own. It combines a web dashboard, authenticated FastAPI service, SQLite persistence, outbound-polling Termux/Linux workers, real tool integrations, and structured findings.
 
-> Mercury is currently an early scaffold. The initial release focuses on environment diagnostics, tool discovery, strict target scope, and safe orchestration foundations. It does not yet implement a production scanner or remote dashboard.
+> Version 0.2 is an early functional MVP. It supports DNS TXT ownership verification, queued scans, HTTP/TLS/header checks, and a bounded Nmap top-100 TCP scan. It is not a full penetration-testing suite.
 
-## Design
+## Features
 
-- **Termux-first:** Python CLI designed to run on Android/ARM64 and Linux.
-- **Real tools:** Detect installed tools such as Nmap, curl, dig, whois, OpenSSL, jq, Nuclei, and others.
-- **Hybrid operation:** Operators choose tests; AI may recommend additional tests for explicit approval.
-- **Scope enforcement:** Only pre-registered, ownership-verified targets may be assessed.
-- **Remote-ready:** A future outbound worker connection will let a Vercel-hosted dashboard dispatch jobs without exposing the phone to inbound internet traffic.
+- Dark responsive dashboard served by the API at `/`.
+- Bearer-token API authentication.
+- Target registration and DNS TXT ownership verification.
+- SQLite scan, job, finding, worker, and audit persistence.
+- Outbound worker polling; no inbound port forwarding required on Termux.
+- Baseline DNS, HTTP, TLS and security-header assessment.
+- Optional bounded Nmap TCP scan (`-sT`, top 100 ports, timeout).
+- Tool registry and Termux environment diagnostics.
+- JSON reports and deterministic finding prioritization.
+- OpenAPI docs at `/docs`.
 
-## Quick start (Termux)
+## Termux installation
 
 ```bash
 pkg update && pkg upgrade -y
@@ -23,43 +28,80 @@ git clone https://github.com/jadeking5128-beep/Mercury.git
 cd Mercury
 python -m venv .venv
 . .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[api,dev]"
 mercury doctor
 mercury tools
 ```
 
-If a package is unavailable in your Termux repository, check `pkg search <name>` and the upstream project's official installation instructions. Do not pipe unverified remote scripts into a shell.
+## Run locally
 
-## Commands
+Generate a token and export it in the same shell:
 
-- `mercury doctor` — inspect platform, architecture, Python, and supported tool availability.
-- `mercury tools` — list registered tools and detected versions.
-- `mercury version` — print the Mercury version.
-
-## Repository layout
-
-```text
-mercury/
-  mercury/
-    cli.py
-    tools/       # tool metadata and discovery
-    security/    # target scope and policy primitives
-  tests/
-  docs/
+```bash
+export MERCURY_API_TOKEN="$(mercury token)"
+mercury init-db
+mercury api
 ```
 
-## Security model
+Open `http://127.0.0.1:8765`, enter the token, register a hostname you control, and publish the displayed TXT record:
 
-Mercury must not execute AI-generated shell commands. Integrations use fixed adapters and validated argument lists. Before any active scan is added, the project will require target ownership verification, explicit scope, rate limits, timeouts, audit logging, and isolated worker execution. No arbitrary-host scanning, destructive testing, persistence, credential theft, or data extraction is supported.
+`_mercury-challenge.YOUR-DOMAIN TXT mercury-verification=YOUR-CHALLENGE`
 
-## Roadmap
+After DNS propagates, verify the target and queue a scan. Keep the API bound to localhost for local use.
 
-1. CLI, Termux compatibility checks, and tool registry.
-2. Target inventory and ownership verification.
-3. Safe baseline checks (DNS, HTTP metadata, TLS, security headers).
-4. Scan jobs, structured evidence, and reports.
-5. Remote worker/API and dashboard.
-6. AI planning and analysis with human approval gates.
+In a second Termux session, export the same API token and start the worker:
+
+```bash
+export MERCURY_API_TOKEN="same-token"
+export MERCURY_API_URL="http://127.0.0.1:8765"
+mercury worker
+```
+
+For a remote deployment, host the API and database on a persistent service, configure HTTPS, set a strong secret token, and set `MERCURY_API_URL` on the Termux worker to the public API URL. The worker initiates outbound HTTPS requests; do not expose the phone's local server.
+
+## API
+
+- `GET /api/v1/health`
+- `GET /api/v1/tools`
+- `POST /api/v1/targets`
+- `POST /api/v1/targets/{id}/verify`
+- `GET /api/v1/targets`
+- `DELETE /api/v1/targets/{id}`
+- `POST /api/v1/scans`
+- `GET /api/v1/scans`
+- `GET /api/v1/scans/{id}`
+- `GET /api/v1/scans/{id}/findings`
+- `GET /api/v1/reports/{id}`
+- `GET /api/v1/workers`
+- Worker heartbeat, claim, complete, and fail endpoints under `/api/v1/worker(s)`.
+
+All API endpoints require `Authorization: Bearer <MERCURY_API_TOKEN>`. Interactive API documentation is at `/docs`.
+
+## Security boundaries
+
+- Only DNS-verified hostnames can be scanned.
+- Raw IP addresses and private, loopback, link-local, multicast, and other non-global resolved addresses are blocked.
+- DNS is resolved again immediately before scan execution to reduce rebinding risk.
+- Nmap is restricted to TCP connect scanning of the top 100 ports with timeouts.
+- No arbitrary shell commands, destructive tests, credential attacks, persistence, or data extraction.
+- Keep the API behind HTTPS and a trusted reverse proxy for remote use.
+- The initial single-token authentication model is suitable only for a trusted single-operator deployment; multi-user RBAC and per-worker credentials remain future work.
+
+## Current limitations
+
+- SQLite is intended for a single-node MVP; use PostgreSQL for a multi-instance production deployment.
+- Worker jobs use the API token and should be upgraded to separate worker credentials before public multi-user hosting.
+- AI analysis is deterministic rule-based triage, not an LLM. Provider integration and human-approved AI test planning are future work.
+- Nmap is optional. Other registered tools are detected but not automatically executed.
+- The dashboard is served by FastAPI. Vercel deployment requires a separate persistent API/worker/database deployment; Vercel alone is not the scan execution host.
+
+## Development
+
+```bash
+pip install -e ".[api,dev]"
+pytest -q
+ruff check mercury tests
+```
 
 ## License
 
