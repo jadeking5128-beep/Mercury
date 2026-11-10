@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse\nfrom fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from mercury import __version__
