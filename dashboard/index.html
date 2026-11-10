@@ -16,8 +16,9 @@
 <div class="cols"><section class="panel"><h2>Connected workers</h2><div id="workers" class="list muted">No workers have checked in.</div></section><section class="panel"><h2>Tool inventory</h2><div id="toolInventory" class="list muted">Loading tools…</div></section></div>
 <div class="muted small" style="margin-top:20px">Mercury early release · Scans are limited to DNS-verified public hostnames. Nmap is bounded to the top 100 TCP ports.</div></main></div>
 <script>
-let token=sessionStorage.getItem('mercury_token')||'',apiBase=sessionStorage.getItem('mercury_api_url')||location.origin,pendingTarget=null,challengeToken=null,cache={},currentFindings=[];\ndocument.getElementById('apiurl').value=apiBase;
-async function api(path,opts={}){let r=await fetch(apiBase.replace(/\\/$/,'')+path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,...(opts.headers||{})}});let data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.detail||('HTTP '+r.status));return data}
+let token=sessionStorage.getItem('mercury_token')||'',apiBase=sessionStorage.getItem('mercury_api_url')||location.origin,pendingTarget=null,challengeToken=null,cache={},currentFindings=[];
+document.getElementById('apiurl').value=apiBase;
+async function api(path,opts={}){let r=await fetch(apiBase.replace(/\/$/,'')+path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token,...(opts.headers||{})}});let data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.detail||('HTTP '+r.status));return data}
 async function connect(){token=document.getElementById('token').value.trim();apiBase=document.getElementById('apiurl').value.trim().replace(/\\/$/,'')||location.origin;try{await api('/api/v1/health');sessionStorage.setItem('mercury_token',token);sessionStorage.setItem('mercury_api_url',apiBase);showApp();await refresh()}catch(e){document.getElementById('loginmsg').textContent=e.message}}
 function showApp(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden')}
 function logout(){sessionStorage.removeItem('mercury_token');sessionStorage.removeItem('mercury_api_url');token='';location.reload()}
