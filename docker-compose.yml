@@ -1,0 +1,27 @@
+services:
+  api:
+    build: .
+    command: uvicorn mercury.api:app --host 0.0.0.0 --port 8765
+    environment:
+      MERCURY_API_TOKEN: ${MERCURY_API_TOKEN:?Set MERCURY_API_TOKEN in the environment}
+      MERCURY_DB: /data/mercury.db
+      MERCURY_CORS_ORIGINS: ${MERCURY_CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - mercury-data:/data
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: mercury worker
+    environment:
+      MERCURY_API_TOKEN: ${MERCURY_API_TOKEN:?Set MERCURY_API_TOKEN in the environment}
+      MERCURY_API_URL: http://api:8765
+      MERCURY_DB: /data/mercury.db
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mercury-data:
