@@ -1,0 +1,1 @@
+"""AI analysis adapters; no model can execute tools."""
