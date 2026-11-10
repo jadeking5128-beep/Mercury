@@ -7,6 +7,7 @@ import os
 import platform
 import secrets
 import shutil
+import subprocess
 import sys
 
 from mercury import __version__
@@ -34,21 +35,37 @@ def command_tools() -> int:
     return 0
 
 
+def command_install_tools() -> int:
+    if not shutil.which("pkg"):
+        print("Termux pkg manager not detected. Use your Linux distribution's package manager.", file=sys.stderr)
+        return 2
+    packages = [
+        "nmap", "curl", "dnsutils", "whois", "openssl-tool",
+        "jq", "netcat-openbsd", "traceroute",
+    ]
+    print("Installing curated Termux packages:", ", ".join(packages))
+    return subprocess.run(["pkg", "install", "-y", *packages], check=False).returncode
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="mercury", description="Mercury security assessment toolkit")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("doctor", help="inspect the local environment")
-    sub.add_parser("tools", help="list supported security tools")\n    sub.add_parser("install-tools", help="install the curated native Termux tool set")
+    sub.add_parser("tools", help="list supported security tools")
+    sub.add_parser("install-tools", help="install the curated native Termux tool set")
     sub.add_parser("token", help="generate a secure API token")
     sub.add_parser("api", help="run the Mercury API")
     sub.add_parser("worker", help="run an outbound-polling scan worker")
     sub.add_parser("init-db", help="initialize the local SQLite database")
     args = parser.parse_args()
+
     if args.command == "doctor":
         return command_doctor()
     if args.command == "tools":
         return command_tools()
+    if args.command == "install-tools":
+        return command_install_tools()
     if args.command == "token":
         print(secrets.token_urlsafe(48))
         return 0
