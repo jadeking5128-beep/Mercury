@@ -87,7 +87,7 @@ All API endpoints require `Authorization: Bearer <MERCURY_API_TOKEN>`. Interacti
 - Keep the API behind HTTPS and a trusted reverse proxy for remote use.
 - The initial single-token authentication model is suitable only for a trusted single-operator deployment; multi-user RBAC and per-worker credentials remain future work.
 
-## Current limitations
+## Optional AI analyst\n\nMercury uses deterministic severity triage by default. To enable an OpenAI-compatible chat-completions provider, configure these environment variables on the API host:\n\n- `MERCURY_AI_BASE_URL` — provider base URL, e.g. `https://api.openai.com/v1`\n- `MERCURY_AI_API_KEY` — provider key\n- `MERCURY_AI_MODEL` — model identifier\n\nThe model receives finding data for defensive explanation only. It cannot execute tools or dispatch scans.\n\n## Current limitations
 
 - SQLite is intended for a single-node MVP; use PostgreSQL for a multi-instance production deployment.
 - Worker jobs use the API token and should be upgraded to separate worker credentials before public multi-user hosting.
