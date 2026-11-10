@@ -18,24 +18,33 @@ class MercuryWorker:
     def __init__(self, api_url: str, token: str, name: str | None = None) -> None:
         self.api_url = api_url.rstrip("/")
         self.token = token
-        self.name = name or f"termux-{uuid.uuid4().hex[:8]}"\n        self.tools = tool_status_dicts()
+        self.name = name or f"termux-{uuid.uuid4().hex[:8]}"
+        self.tools = tool_status_dicts()
 
     def request(self, method: str, path: str, payload: dict | None = None) -> dict:
         data = json.dumps(payload).encode() if payload is not None else None
-        req = urllib.request.Request(self.api_url + path, data=data, method=method,
-                                     headers={"Authorization": f"Bearer {self.token}",
-                                              "Content-Type": "application/json"})
+        req = urllib.request.Request(
+            self.api_url + path,
+            data=data,
+            method=method,
+            headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(req, timeout=25) as response:
             raw = response.read()
             return json.loads(raw) if raw else {}
 
     def run_forever(self, poll_seconds: int = 5) -> None:
         print(f"Mercury worker '{self.name}' connected to {self.api_url}")
+        last_heartbeat = 0.0
         while True:
             try:
-                self.request("POST", "/api/v1/workers/heartbeat",
-                             {"name": self.name, "platform": platform.platform(),
-                              "tools": tool_status_dicts()})
+                if time.monotonic() - last_heartbeat >= 60:
+                    self.request(
+                        "POST",
+                        "/api/v1/workers/heartbeat",
+                        {"name": self.name, "platform": platform.platform(), "tools": self.tools},
+                    )
+                    last_heartbeat = time.monotonic()
                 job = self.request("POST", "/api/v1/worker/jobs/claim", {"worker": self.name})
                 if not job.get("job"):
                     time.sleep(poll_seconds)
@@ -43,12 +52,18 @@ class MercuryWorker:
                 item = job["job"]
                 try:
                     findings = run_assessment(item["hostname"], item["modules"])
-                    self.request("POST", f"/api/v1/worker/jobs/{item['id']}/complete",
-                                 {"findings": findings})
+                    self.request(
+                        "POST",
+                        f"/api/v1/worker/jobs/{item['id']}/complete",
+                        {"findings": findings},
+                    )
                     print(f"Completed scan {item['scan_id']}: {len(findings)} findings")
                 except Exception as exc:
-                    self.request("POST", f"/api/v1/worker/jobs/{item['id']}/fail",
-                                 {"error": str(exc)[:500]})
+                    self.request(
+                        "POST",
+                        f"/api/v1/worker/jobs/{item['id']}/fail",
+                        {"error": str(exc)[:500]},
+                    )
             except KeyboardInterrupt:
                 print("Mercury worker stopped.")
                 return
