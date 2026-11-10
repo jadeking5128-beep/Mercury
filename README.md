@@ -15,7 +15,7 @@ Mercury is an open-source security assessment workspace for DNS-verified website
 - Outbound worker polling; no inbound port forwarding required on Termux.
 - Baseline DNS, HTTP, TLS and security-header assessment.
 - Optional bounded Nmap TCP scan (`-sT`, top 100 ports, timeout).
-- Tool registry and Termux environment diagnostics.
+- Tool registry, Termux environment diagnostics, and curated `mercury install-tools` command.
 - JSON reports and deterministic finding prioritization.
 - OpenAPI docs at `/docs`.
 
