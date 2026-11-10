@@ -1,42 +1,41 @@
 # Mercury
 
-**Termux-first, remotely accessible security assessment platform.**
+**Open-source, Termux-first security assessment platform for assets you own or are explicitly authorized to test.**
 
-Mercury is an open-source security assessment workspace for DNS-verified websites and services you own. It combines a web dashboard, authenticated FastAPI service, SQLite persistence, outbound-polling Termux/Linux workers, real tool integrations, and structured findings.
+Mercury combines a browser dashboard, authenticated FastAPI control plane, SQLite persistence, and an outbound-polling worker for Termux or Linux. The dashboard can be hosted separately from the scanner.
 
-> Version 0.2 is an early functional MVP. It supports DNS TXT ownership verification, queued scans, HTTP/TLS/header checks, and a bounded Nmap top-100 TCP scan. It is not a full penetration-testing suite.
+> **Status:** early-stage MVP. Implemented checks include DNS resolution, bounded HTTP(S) probes, TLS certificate checks, response-header checks, and an optional bounded Nmap TCP connect scan. Mercury is not a general-purpose exploitation framework or a substitute for a professional penetration test.
 
-## Features
+## Implemented capabilities
 
-- Dark responsive dashboard served by the API at `/`.
-- Bearer-token API authentication.
-- Target registration and DNS TXT ownership verification.
-- SQLite scan, job, finding, worker, and audit persistence.
-- Outbound worker polling; no inbound port forwarding required on Termux.
-- Baseline DNS, HTTP, TLS and security-header assessment.
-- Optional bounded Nmap TCP scan (`-sT`, top 100 ports, timeout).
-- Tool registry, Termux environment diagnostics, and curated `mercury install-tools` command.
-- JSON reports and deterministic finding prioritization.
-- OpenAPI docs at `/docs`.
+- DNS TXT challenge verification before a target can be scanned.
+- Bearer-token authenticated API and responsive dashboard.
+- Persistent targets, scan jobs, findings, workers, and audit events.
+- Outbound worker polling; no inbound phone port forwarding required.
+- DNS, HTTP, TLS, security-header, and Nmap modules.
+- Public-address checks and pinned HTTP connections to reduce DNS-rebinding and redirect-based scope escapes.
+- Tool inventory, Termux package helper, JSON reports, and optional AI-assisted finding analysis.
+- OpenAPI schema at `/openapi.json` and interactive docs at `/docs`.
 
-## Termux installation
+The tool registry detects installed binaries; it does **not** mean every listed tool is wired into scan execution. See [Tool support](docs/TOOLS.md).
+
+## Quick start: Termux
 
 ```bash
 pkg update && pkg upgrade -y
-pkg install -y python git nmap curl dnsutils whois openssl-tool jq
+pkg install -y python git
 git clone https://github.com/jadeking5128-beep/Mercury.git
 cd Mercury
 python -m venv .venv
 . .venv/bin/activate
+python -m pip install --upgrade pip
 pip install -e ".[api,dev]"
 mercury install-tools
 mercury doctor
 mercury tools
 ```
 
-## Run locally
-
-Generate a token and export it in the same shell:
+Start the local API; keep this shell running:
 
 ```bash
 export MERCURY_API_TOKEN="$(mercury token)"
@@ -44,66 +43,69 @@ mercury init-db
 mercury api
 ```
 
-Open `http://127.0.0.1:8765`, enter the token, register a hostname you control, and publish the displayed TXT record:
+Open http://127.0.0.1:8765 and enter the generated token. The API binds to localhost by default.
 
-`_mercury-challenge.YOUR-DOMAIN TXT mercury-verification=YOUR-CHALLENGE`
-
-After DNS propagates, verify the target and queue a scan. Keep the API bound to localhost for local use.
-
-In a second Termux session, export the same API token and start the worker:
+In a second Termux session:
 
 ```bash
-export MERCURY_API_TOKEN="same-token"
+cd Mercury
+. .venv/bin/activate
+export MERCURY_API_TOKEN="the-same-token"
 export MERCURY_API_URL="http://127.0.0.1:8765"
 mercury worker
 ```
 
-For a remote deployment, host the API and database on a persistent service, configure HTTPS, set a strong secret token, and set `MERCURY_API_URL` on the Termux worker to the public API URL. The worker initiates outbound HTTPS requests; do not expose the phone's local server.
+For remote use, the worker's API URL must be reachable over HTTPS. The Vercel dashboard URL is not the API URL.
 
-## API
+## Verify and scan an owned domain
 
-- `GET /api/v1/health`
-- `GET /api/v1/tools`
-- `POST /api/v1/targets`
-- `POST /api/v1/targets/{id}/verify`
-- `GET /api/v1/targets`
-- `DELETE /api/v1/targets/{id}`
-- `POST /api/v1/scans`
-- `GET /api/v1/scans`
-- `GET /api/v1/scans/{id}`
-- `GET /api/v1/scans/{id}/findings`
-- `GET /api/v1/reports/{id}`
-- `GET /api/v1/workers`
-- Worker heartbeat, claim, complete, and fail endpoints under `/api/v1/worker(s)`.
+1. Register a DNS hostname in the dashboard.
+2. Mercury returns a unique TXT record name and value.
+3. Publish the TXT record in the authoritative DNS zone.
+4. Trigger verification after DNS propagation.
+5. Select supported modules and queue the scan.
+6. Keep a worker online to process the job.
 
-All API endpoints require `Authorization: Bearer <MERCURY_API_TOKEN>`. Interactive API documentation is at `/docs`.
+Example record (use the exact challenge returned by Mercury):
 
-## Security boundaries
+```text
+Name:  _mercury-challenge.example.com
+Type:  TXT
+Value: mercury-verification=<challenge>
+```
 
-- Only DNS-verified hostnames can be scanned.
-- Raw IP addresses and private, loopback, link-local, multicast, and other non-global resolved addresses are blocked.
-- DNS is resolved again immediately before scan execution to reduce rebinding risk.
-- Nmap is restricted to TCP connect scanning of the top 100 ports with timeouts.
-- No arbitrary shell commands, destructive tests, credential attacks, persistence, or data extraction.
-- Keep the API behind HTTPS and a trusted reverse proxy for remote use.
-- The initial single-token authentication model is suitable only for a trusted single-operator deployment; multi-user RBAC and per-worker credentials remain future work.
+DNS control is a scope gate, not proof that every system behind a domain is yours. Obtain authorization for the exact hosts, services, cloud accounts, and methods before scanning. Read [Security and scope](docs/SECURITY.md).
 
-## Optional AI analyst\n\nMercury uses deterministic severity triage by default. To enable an OpenAI-compatible chat-completions provider, configure these environment variables on the API host:\n\n- `MERCURY_AI_BASE_URL` — provider base URL, e.g. `https://api.openai.com/v1`\n- `MERCURY_AI_API_KEY` — provider key\n- `MERCURY_AI_MODEL` — model identifier\n\nThe model receives finding data for defensive explanation only. It cannot execute tools or dispatch scans.\n\n## Current limitations
+## Deployment model
 
-- SQLite is intended for a single-node MVP; use PostgreSQL for a multi-instance production deployment.
-- Worker jobs use the API token and should be upgraded to separate worker credentials before public multi-user hosting.
-- AI analysis is deterministic rule-based triage, not an LLM. Provider integration and human-approved AI test planning are future work.
-- Nmap is optional. Other registered tools are detected but not automatically executed.
-- The dashboard can be deployed as a static site on Vercel from `dashboard/` using `vercel.json`. The API, persistent database, and worker run separately; see [Deployment](docs/DEPLOYMENT.md).
+- **Vercel:** static dashboard only.
+- **API:** persistent host/container with HTTPS ingress.
+- **Database:** persistent volume; SQLite is single-node only.
+- **Worker:** Termux phone or Linux host, making outbound HTTPS requests.
+
+See [Deployment guide](docs/DEPLOYMENT.md). Do not expose an unauthenticated API or send bearer tokens over plain HTTP.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [API reference](docs/API.md)
+- [Security, scope and threat model](docs/SECURITY.md)
+- [Supported tools and modules](docs/TOOLS.md)
+- [Deployment and operations](docs/DEPLOYMENT.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security reporting](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
 ## Development
 
 ```bash
-pip install -e ".[api,dev]"
+python -m pip install -e ".[api,dev]"
 pytest -q
 ruff check mercury tests
 ```
 
+GitHub Actions tests Python 3.10, 3.11, and 3.12. Verify a passing CI run before treating a release as production-ready.
+
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Mercury is distributed under the [MIT License](LICENSE).
